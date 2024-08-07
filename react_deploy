@@ -1,0 +1,50 @@
+pipeline
+{
+    agent any
+    tools {
+        maven '3.9.8'
+    }
+
+    stages
+    {
+        stage ('Checkout')
+        {
+            steps {
+                git credentialsId: 'gitpersonaltoken', url: 'https://github.com/heojungyoung/deployreact.git'
+            }
+        }
+        stage ('Build && test')
+        {
+            steps {
+               sh "mvn clean --file /Users/heojeong-yeong/.jenkins/workspace/react_maven/backend/pom.xml compile install -Dmaven.test.skip=false"
+
+            }
+        }
+        stage ('deploy')
+        {
+            steps{
+                sshPublisher(
+                    publishers: [sshPublisherDesc(configName: 'ubuntu', transfers: [sshTransfer(cleanRemote: false, excludes: '',
+
+                        execCommand: '''echo ">8080번 포트 종료"
+                            fuser -k -n tcp 8080
+                            echo ">chuchu 어플리케이션 실행"
+                            sudo nohup java -jar /home/tyireal/tyireal/backend-0.0.1-SNAPSHOT.war > /dev/null 2>&1 &''',
+
+                            execTimeout: 120000,
+                            flatten: false,
+                            makeEmptyDirs: false,
+                            noDefaultExcludes: false,
+                            patternSeparator: '[, ]+',
+                            remoteDirectory: 'tyireal',
+                            remoteDirectorySDF: false,
+                            removePrefix: 'backend/target',
+                            sourceFiles: 'backend/target/backend-0.0.1-SNAPSHOT.war')],
+                            usePromotionTimestamp: false,
+                            useWorkspaceInPromotion: false, verbose: false)]
+                        )
+            }
+        }
+
+    }
+}
